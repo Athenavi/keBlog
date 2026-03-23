@@ -2,7 +2,7 @@ import {type NextRequest, NextResponse} from "next/server"
 import {createClient} from "@/lib/supabase/server"
 import {logArticleDeleted, logArticleUpdated} from "@/lib/activity-logger"
 
-export async function GET(request: NextRequest, {params}: { params: { id: string } }) {
+export async function GET(request: NextRequest, {params}: { params: Promise<{ id: string }> }) {
     try {
         const supabase = await createClient()
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, {params}: { params: { id: string
             return NextResponse.json({error: "Unauthorized"}, {status: 401})
         }
 
-        const {id: articleId} = params
+        const {id: articleId} = await params
 
         const {data: article, error} = await supabase
             .from("articles")
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest, {params}: { params: { id: string
     }
 }
 
-export async function DELETE(request: NextRequest, {params}: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, {params}: { params: Promise<{ id: string }> }) {
     try {
         const supabase = await createClient()
 
@@ -93,7 +93,7 @@ export async function DELETE(request: NextRequest, {params}: { params: { id: str
             return NextResponse.json({error: "Unauthorized"}, {status: 401})
         }
 
-        const {id: articleId} = params
+        const {id: articleId} = await params
 
         // Check if article exists and user owns it
         const {data: article, error: fetchError} = await supabase
@@ -136,7 +136,7 @@ export async function DELETE(request: NextRequest, {params}: { params: { id: str
     }
 }
 
-export async function PUT(request: NextRequest, {params}: { params: { id: string } }) {
+export async function PUT(request: NextRequest, {params}: { params: Promise<{ id: string }> }) {
     try {
         const supabase = await createClient()
 
@@ -149,7 +149,7 @@ export async function PUT(request: NextRequest, {params}: { params: { id: string
             return NextResponse.json({error: "Unauthorized"}, {status: 401})
         }
 
-        const {id: articleId} = params
+        const {id: articleId} = await params
         const body = await request.json()
         const {title, slug, excerpt, content, status} = body
 
