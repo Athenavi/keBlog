@@ -9,7 +9,7 @@ import {Badge} from "@/components/ui/badge"
 import {Alert, AlertDescription} from "@/components/ui/alert"
 import {ArrowLeft, Download, Eye, File, FileText, ImageIcon, Plus, Search, Trash2, Video} from "lucide-react"
 import Link from "next/link"
-import VirtualList from "@/components/ui/virtual-list"
+import InfiniteScrollGrid from "@/components/ui/infinite-scroll-grid"
 
 interface MediaFile {
     id: string
@@ -208,7 +208,7 @@ export default function MediaPage() {
                         </Alert>
                     )}
 
-                    {/* Media Grid with Virtual Scroll */}
+                    {/* Media Grid with Infinite Scroll */}
                     {filteredMedia.length === 0 ? (
                         <Card className="border-slate-200 dark:border-slate-700">
                             <CardContent className="text-center py-12">
@@ -234,11 +234,9 @@ export default function MediaPage() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <VirtualList<MediaFile>
+                        <InfiniteScrollGrid<MediaFile>
                             items={filteredMedia}
-                            itemHeight={380}
-                            overscan={3}
-                            containerClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                            initialPageSize={30}
                             renderItem={(file) => (
                                 <Card
                                     key={file.id}
@@ -313,6 +311,11 @@ export default function MediaPage() {
                                         </div>
                                     </CardContent>
                                 </Card>
+                            )}
+                            renderContainer={(children) => (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {children}
+                                </div>
                             )}
                         />
                     )}
