@@ -112,6 +112,45 @@ export default async function DashboardPage() {
                         </Card>
                     </div>
 
+                    {/* Admin Section - Only visible to admins */}
+                    <Card className="border-slate-200 dark:border-slate-700 mb-8">
+                        <CardHeader>
+                            <CardTitle className="text-red-600 dark:text-red-400">系统管理</CardTitle>
+                            <CardDescription>管理系统角色、权限和用户</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold">角色管理</h3>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                                        创建和管理系统角色，分配权限
+                                    </p>
+                                    <Button asChild size="sm" className="w-full">
+                                        <Link href="/dashboard/roles">管理角色</Link>
+                                    </Button>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold">权限管理</h3>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                                        定义和管理系统权限
+                                    </p>
+                                    <Button asChild size="sm" className="w-full" variant="outline">
+                                        <Link href="/dashboard/permissions">管理权限</Link>
+                                    </Button>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold">用户角色</h3>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                                        为用户分配和移除角色
+                                    </p>
+                                    <Button asChild size="sm" className="w-full" variant="outline">
+                                        <Link href="/dashboard/user-roles">分配角色</Link>
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* Quick Actions */}
                     <Card className="border-slate-200 dark:border-slate-700">
                         <CardHeader>

@@ -38,8 +38,8 @@ export default function LoginPage() {
             }
 
             console.log("Login successful, user:", data.user)
-            router.push("/dashboard")
-            router.refresh()
+            // Force hard refresh to reload auth state
+            window.location.href = "/dashboard"
         } catch (error: unknown) {
             console.error("Login exception:", error)
             setError(error instanceof Error ? error.message : "An error occurred")

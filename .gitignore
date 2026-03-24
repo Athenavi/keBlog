@@ -43,3 +43,4 @@ coverage/
 Thumbs.db
 
 /.bashrc
+/public/Storage/

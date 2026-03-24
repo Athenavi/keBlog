@@ -9,6 +9,7 @@ import {Badge} from "@/components/ui/badge"
 import {Alert, AlertDescription} from "@/components/ui/alert"
 import {ArrowLeft, Calendar, Edit, Eye, Plus, Search, Trash2, User} from "lucide-react"
 import Link from "next/link"
+import VirtualList from "@/components/ui/virtual-list"
 
 interface Article {
     id: string
@@ -164,7 +165,7 @@ export default function ArticlesPage() {
                         </Alert>
                     )}
 
-                    {/* Articles Grid */}
+                    {/* Articles List with Virtual Scroll */}
                     {filteredArticles.length === 0 ? (
                         <Card className="border-slate-200 dark:border-slate-700">
                             <CardContent className="text-center py-12">
@@ -190,8 +191,12 @@ export default function ArticlesPage() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <div className="grid gap-6">
-                            {filteredArticles.map((article) => (
+                        <VirtualList<Article>
+                            items={filteredArticles}
+                            itemHeight={280}
+                            overscan={3}
+                            containerClassName="space-y-6"
+                            renderItem={(article) => (
                                 <Card
                                     key={article.id}
                                     className="border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
@@ -262,8 +267,8 @@ export default function ArticlesPage() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            ))}
-                        </div>
+                            )}
+                        />
                     )}
                 </div>
             </div>

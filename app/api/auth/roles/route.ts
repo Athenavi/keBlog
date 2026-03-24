@@ -1,4 +1,5 @@
 import {createClient} from "@/lib/supabase/server"
+import {createClient as createAdminClient} from "@/lib/supabase/admin"
 import {NextResponse} from "next/server"
 
 // Get user roles and permissions
@@ -15,8 +16,9 @@ export async function GET() {
             return NextResponse.json({error: "Unauthorized"}, {status: 401})
         }
 
-        // Get user roles with permissions
-        const {data: userRoles, error: rolesError} = await supabase
+        // Get user roles with permissions - use admin client to bypass RLS
+        const adminSupabase = createAdminClient()
+        const {data: userRoles, error: rolesError} = await adminSupabase
             .from("user_roles")
             .select(`
         roles (
@@ -66,10 +68,16 @@ export async function POST(request: Request) {
             return NextResponse.json({error: "Unauthorized"}, {status: 401})
         }
 
-        // Check if user is admin
-        const {data: adminCheck} = await supabase
+        // Check if user is admin - use admin client to bypass RLS
+        const adminSupabase = createAdminClient()
+        const {data: adminCheck} = await adminSupabase
             .from("user_roles")
-            .select("roles!inner(name)")
+            .select(`
+                roles (
+                    id,
+                    name
+                )
+            `)
             .eq("user_id", user.id)
             .eq("roles.name", "admin")
             .single()
