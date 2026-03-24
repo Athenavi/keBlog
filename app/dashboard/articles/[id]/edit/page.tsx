@@ -11,8 +11,10 @@ import {Textarea} from "@/components/ui/textarea"
 import MarkdownEditor from "@/components/markdown/MarkdownEditor"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 import {Alert, AlertDescription} from "@/components/ui/alert"
-import {ArrowLeft, Eye, Save} from "lucide-react"
+import {ArrowLeft, Eye, Save, Languages, Loader2, CheckCircle2, AlertCircle} from "lucide-react"
 import Link from "next/link"
+import {Badge} from "@/components/ui/badge"
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 
 interface Category {
     id: string
@@ -29,6 +31,24 @@ interface Article {
     status: "Draft" | "Published" | "Deleted"
 }
 
+interface Translation {
+    language_code: string
+    title: string
+    content: string
+    excerpt: string | null
+    hasTranslation: boolean
+}
+
+const SUPPORTED_LANGUAGES = [
+    {code: "zh-CN", name: "简体中文", flag: "🇨🇳"},
+    {code: "en", name: "English", flag: "🇺🇸"},
+    {code: "ja", name: "日本語", flag: "🇯🇵"},
+    {code: "ko", name: "한국어", flag: "🇰🇷"},
+    {code: "fr", name: "Français", flag: "🇫🇷"},
+    {code: "de", name: "Deutsch", flag: "🇩🇪"},
+    {code: "es", name: "Español", flag: "🇪🇸"},
+]
+
 export default function EditArticlePage() {
     const [title, setTitle] = useState("")
     const [slug, setSlug] = useState("")
@@ -41,6 +61,12 @@ export default function EditArticlePage() {
     const [isLoadingArticle, setIsLoadingArticle] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
+
+    // 多语言状态
+    const [activeLanguage, setActiveLanguage] = useState("zh-CN")
+    const [translations, setTranslations] = useState<Record<string, Translation>>({})
+    const [isTranslating, setIsTranslating] = useState<Record<string, boolean>>({})
+    
     const router = useRouter()
     const params = useParams()
     const articleId = params.id as string
@@ -49,6 +75,7 @@ export default function EditArticlePage() {
         if (articleId) {
             fetchArticle()
             fetchCategories()
+            fetchTranslations()
         }
     }, [articleId])
 
@@ -92,6 +119,111 @@ export default function EditArticlePage() {
             setError(error instanceof Error ? error.message : "Failed to load article")
         } finally {
             setIsLoadingArticle(false)
+        }
+    }
+
+    const fetchTranslations = async () => {
+        try {
+            const translationsData: Record<string, Translation> = {}
+
+            for (const lang of SUPPORTED_LANGUAGES) {
+                if (lang.code === "zh-CN") continue // 跳过原文
+
+                const response = await fetch(`/api/articles/${articleId}/i18n?language=${lang.code}`)
+                const data = await response.json()
+
+                translationsData[lang.code] = {
+                    language_code: lang.code,
+                    title: data.data?.title || "",
+                    content: data.data?.content || "",
+                    excerpt: data.data?.excerpt || "",
+                    hasTranslation: data.exists || false,
+                }
+            }
+
+            setTranslations(translationsData)
+        } catch (error) {
+            console.error("Failed to fetch translations:", error)
+        }
+    }
+
+    const handleTranslate = async (targetLanguage: string) => {
+        setIsTranslating((prev) => ({...prev, [targetLanguage]: true}))
+        setError(null)
+
+        try {
+            const response = await fetch(`/api/articles/${articleId}/translate`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({targetLanguage}),
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || "Translation failed")
+            }
+
+            const data = await response.json()
+
+            // 更新翻译状态
+            setTranslations((prev) => ({
+                ...prev,
+                [targetLanguage]: {
+                    language_code: targetLanguage,
+                    title: data.translation?.title || "",
+                    content: data.translation?.content || "",
+                    excerpt: data.translation?.excerpt || "",
+                    hasTranslation: true,
+                },
+            }))
+
+            setSuccess(`已成功翻译成 ${SUPPORTED_LANGUAGES.find(l => l.code === targetLanguage)?.name}`)
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "翻译失败")
+        } finally {
+            setIsTranslating((prev) => ({...prev, [targetLanguage]: false}))
+        }
+    }
+
+    const updateTranslation = (langCode: string, field: keyof Translation, value: string) => {
+        setTranslations((prev) => ({
+            ...prev,
+            [langCode]: {
+                ...prev[langCode],
+                [field]: value,
+            },
+        }))
+    }
+
+    const saveTranslation = async (langCode: string) => {
+        const translation = translations[langCode]
+        if (!translation) return
+
+        setIsLoading(true)
+        setError(null)
+
+        try {
+            const response = await fetch(`/api/articles/${articleId}/i18n`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    language_code: langCode,
+                    title: translation.title,
+                    content: translation.content,
+                    excerpt: translation.excerpt,
+                }),
+            })
+
+            if (!response.ok) {
+                throw new Error("Failed to save translation")
+            }
+
+            setSuccess(`${SUPPORTED_LANGUAGES.find(l => l.code === langCode)?.name} 翻译已保存`)
+            fetchTranslations()
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "保存翻译失败")
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -194,9 +326,145 @@ export default function EditArticlePage() {
                                 Back to Article
                             </Link>
                         </Button>
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Edit Article</h1>
-                        <p className="text-slate-600 dark:text-slate-400">Update your article content and settings</p>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Edit
+                                    Article</h1>
+                                <p className="text-slate-600 dark:text-slate-400">Update your article content and manage
+                                    translations</p>
+                            </div>
+                            <Badge variant="outline" className="text-sm">
+                                <Languages className="w-4 h-4 mr-2"/>
+                                多语言支持
+                            </Badge>
+                        </div>
                     </div>
+
+                    {/* 多语言翻译管理 */}
+                    <Card className="border-slate-200 dark:border-slate-700 mb-6">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Languages className="w-5 h-5"/>
+                                多语言翻译
+                            </CardTitle>
+                            <CardDescription>管理文章的多语言版本，提供自动翻译功能</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Tabs value={activeLanguage} onValueChange={setActiveLanguage}>
+                                <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+                                    {SUPPORTED_LANGUAGES.map((lang) => (
+                                        <TabsTrigger key={lang.code} value={lang.code} className="relative">
+                                            <span className="mr-1">{lang.flag}</span>
+                                            <span className="hidden lg:inline">{lang.name}</span>
+                                            {translations[lang.code]?.hasTranslation && (
+                                                <CheckCircle2
+                                                    className="w-3 h-3 text-green-600 absolute top-1 right-1"/>
+                                            )}
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
+
+                                {SUPPORTED_LANGUAGES.map((lang) => (
+                                    <TabsContent key={lang.code} value={lang.code} className="space-y-4">
+                                        {lang.code === "zh-CN" ? (
+                                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                                <p className="text-sm text-blue-800">
+                                                    <strong>原文语言：</strong>这是您文章的原始语言（简体中文）。请在上方的主编辑器中编辑内容。
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        {translations[lang.code]?.hasTranslation ? (
+                                                            <>
+                                                                <CheckCircle2 className="w-5 h-5 text-green-600"/>
+                                                                <span
+                                                                    className="text-sm font-medium text-green-700">已有翻译</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <AlertCircle className="w-5 h-5 text-orange-600"/>
+                                                                <span
+                                                                    className="text-sm font-medium text-orange-700">暂无翻译</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        {!translations[lang.code]?.hasTranslation && (
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => handleTranslate(lang.code)}
+                                                                disabled={isTranslating[lang.code]}
+                                                            >
+                                                                {isTranslating[lang.code] ? (
+                                                                    <>
+                                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin"/>
+                                                                        翻译中...
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Languages className="w-4 h-4 mr-2"/>
+                                                                        自动翻译
+                                                                    </>
+                                                                )}
+                                                            </Button>
+                                                        )}
+                                                        {translations[lang.code]?.hasTranslation && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => saveTranslation(lang.code)}
+                                                                disabled={isLoading}
+                                                            >
+                                                                <Save className="w-4 h-4 mr-2"/>
+                                                                保存修改
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor={`title-${lang.code}`}>标题</Label>
+                                                        <Input
+                                                            id={`title-${lang.code}`}
+                                                            value={translations[lang.code]?.title || ""}
+                                                            onChange={(e) => updateTranslation(lang.code, "title", e.target.value)}
+                                                            placeholder="输入翻译后的标题..."
+                                                            disabled={!translations[lang.code]?.hasTranslation}
+                                                        />
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor={`excerpt-${lang.code}`}>摘要</Label>
+                                                        <Textarea
+                                                            id={`excerpt-${lang.code}`}
+                                                            value={translations[lang.code]?.excerpt || ""}
+                                                            onChange={(e) => updateTranslation(lang.code, "excerpt", e.target.value)}
+                                                            placeholder="输入翻译后的摘要..."
+                                                            rows={2}
+                                                            disabled={!translations[lang.code]?.hasTranslation}
+                                                        />
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor={`content-${lang.code}`}>内容</Label>
+                                                        <MarkdownEditor
+                                                            value={translations[lang.code]?.content || ""}
+                                                            onChange={(value) => updateTranslation(lang.code, "content", value)}
+                                                            placeholder="翻译后的文章内容..."
+                                                            disabled={!translations[lang.code]?.hasTranslation}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </TabsContent>
+                                ))}
+                            </Tabs>
+                        </CardContent>
+                    </Card>
 
                     <form className="space-y-6">
                         <Card className="border-slate-200 dark:border-slate-700">

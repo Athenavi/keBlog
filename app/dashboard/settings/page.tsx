@@ -34,18 +34,37 @@ export default function SettingsPage() {
 
     const fetchSettings = async () => {
         try {
-            // In a real app, you'd fetch user settings from your API
-            // For now, we'll use default values
+            const {
+                data: {user},
+                error: authError,
+            } = await supabase.auth.getUser();
+
+            if (authError || !user) {
+                throw new Error("Authentication failed");
+            }
+
+            // Fetch email subscription status from database
+            const {data: emailSubData, error: emailSubError} = await supabase
+                .from('email_subscriptions')
+                .select('subscribed')
+                .eq('user_id', user.id)
+                .single();
+
+            if (emailSubError && emailSubError.code !== 'PGRST116') { // Record not found
+                throw emailSubError;
+            }
+            
             setSettings({
-                email_subscriptions: true,
+                email_subscriptions: emailSubData?.subscribed ?? true,
                 notifications_enabled: true,
-            })
+            });
         } catch (error) {
-            setError("Failed to load settings")
+            console.error('Error fetching settings:', error);
+            setError("Failed to load settings");
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
-    }
+    };
 
     const handleLogout = async () => {
         try {
@@ -63,10 +82,28 @@ export default function SettingsPage() {
         setSuccess(null)
 
         try {
-            // In a real app, you'd save settings to your API
-            await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulate API call
+            const {
+                data: {user},
+                error: authError,
+            } = await supabase.auth.getUser();
+
+            if (authError || !user) {
+                throw new Error("Authentication failed");
+            }
+
+            // Update email subscription status in database
+            const {error: updateError} = await supabase.rpc('upsert_email_subscription', {
+                p_user_id: user.id,
+                p_subscribed: settings.email_subscriptions
+            });
+
+            if (updateError) {
+                throw updateError;
+            }
+            
             setSuccess("Settings saved successfully!")
         } catch (error) {
+            console.error('Error saving settings:', error);
             setError("Failed to save settings")
         } finally {
             setIsSaving(false)
