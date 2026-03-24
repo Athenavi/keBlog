@@ -1,6 +1,5 @@
 import {type NextRequest, NextResponse} from "next/server"
 import {createClient} from "@/lib/supabase/server"
-import {logArticleDeleted, logArticleUpdated} from "@/lib/activity-logger"
 
 export async function GET(request: NextRequest, {params}: { params: Promise<{ id: string }> }) {
     try {
@@ -121,13 +120,7 @@ export async function DELETE(request: NextRequest, {params}: { params: Promise<{
             return NextResponse.json({error: "Failed to delete article"}, {status: 500})
         }
 
-        // Log activity
-        try {
-            await logArticleDeleted(articleId, article.title, user.id, request)
-        } catch (logError) {
-            console.error("Failed to log activity:", logError)
-            // Don't fail the request if logging fails
-        }
+        // Activity logging is now handled by database triggers
 
         return NextResponse.json({message: "Article deleted successfully"})
     } catch (error) {
@@ -212,13 +205,7 @@ export async function PUT(request: NextRequest, {params}: { params: Promise<{ id
             return NextResponse.json({error: "Failed to update article content"}, {status: 500})
         }
 
-        // Log activity
-        try {
-            await logArticleUpdated(articleId, title, user.id, request)
-        } catch (logError) {
-            console.error("Failed to log activity:", logError)
-            // Don't fail the request if logging fails
-        }
+        // Activity logging is now handled by database triggers
 
         return NextResponse.json({
             message: "Article updated successfully",

@@ -1,13 +1,12 @@
 import {type NextRequest, NextResponse} from "next/server"
 import {createClient} from "@/lib/supabase/server"
 import {getCurrentUser} from "@/lib/auth"
-import {logMediaDeleted} from "@/lib/activity-logger"
 import fs from "fs"
 import path from "path"
 
-export async function DELETE(request: NextRequest, {params}: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, {params}: { params: Promise<{ id: string }> }) {
     try {
-        const {id} = params
+        const {id} = await params
         const supabase = await createClient()
         const user = await getCurrentUser()
 
@@ -86,13 +85,7 @@ export async function DELETE(request: NextRequest, {params}: { params: { id: str
             return NextResponse.json({error: "Failed to delete media file"}, {status: 500})
         }
 
-        // Log activity
-        try {
-            await logMediaDeleted(id, mediaFile.original_filename, user.id, request)
-        } catch (logError) {
-            console.error("Failed to log activity:", logError)
-            // Don't fail the request if logging fails
-        }
+        // Note: Activity logging is handled by database trigger (media_before_delete)
 
         return NextResponse.json({message: "Media file deleted successfully"})
     } catch (error) {

@@ -1,6 +1,5 @@
 import {type NextRequest, NextResponse} from "next/server"
 import {createClient} from "@/lib/supabase/server"
-import {logArticleCreated} from "@/lib/activity-logger"
 
 export async function GET(request: NextRequest) {
     try {
@@ -152,13 +151,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({error: "Failed to create article content"}, {status: 500})
         }
 
-        // Log activity
-        try {
-            await logArticleCreated(article.id.toString(), title, user.id, request)
-        } catch (logError) {
-            console.error("Failed to log activity:", logError)
-            // Don't fail the request if logging fails
-        }
+        // Activity logging is now handled by database triggers
 
         return NextResponse.json({article}, {status: 201})
     } catch (error) {

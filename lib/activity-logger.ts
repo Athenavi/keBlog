@@ -1,5 +1,6 @@
 // Activity logging utility functions
 
+import {createClient} from "@/lib/supabase/server";
 import {NextRequest} from "next/server";
 
 export interface ActivityLogData {
@@ -21,28 +22,34 @@ export interface ActivityLogResponse {
 /**
  * Log an activity to the database
  */
-export async function logActivity(data: ActivityLogData, request: NextRequest): Promise<ActivityLogResponse> {
+export async function logActivity(data: ActivityLogData, request?: NextRequest): Promise<ActivityLogResponse> {
     try {
-        // 获取完整的 URL 前缀
-        const url = new URL(request.url);
-        const apiEndpoint = new URL('/api/activities', url.origin).href;
+        const supabase = await createClient();
 
-        const response = await fetch(apiEndpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
+        // Get client IP and user agent if not provided
+        const ipAddress = request?.headers.get('x-forwarded-for')?.split(',')[0] ||
+            request?.headers.get('x-real-ip') || undefined;
+        const userAgent = request?.headers.get('user-agent') || undefined;
+
+        // Call the database function to log activity
+        const {data: logId, error} = await supabase.rpc('log_activity', {
+            p_user_id: (await supabase.auth.getUser()).data.user?.id,
+            p_activity_code: data.activity_code,
+            p_entity_type: data.entity_type,
+            p_entity_id: data.entity_id || null,
+            p_title: data.title,
+            p_description: data.description || null,
+            p_metadata: data.metadata || null,
+            p_ip_address: ipAddress || null,
+            p_user_agent: userAgent || null
         });
 
-        const result = await response.json();
-
-        if (!response.ok) {
-            console.error('Failed to log activity:', result.error);
-            return {success: false, error: result.error};
+        if (error) {
+            console.error('Error logging activity:', error);
+            return {success: false, error: error.message};
         }
 
-        return {success: true, log_id: result.log_id, message: result.message};
+        return {success: true, log_id: logId as number, message: 'Activity logged successfully'};
     } catch (error) {
         console.error('Error logging activity:', error);
         return {success: false, error: 'Failed to log activity'};
@@ -61,7 +68,7 @@ export async function logArticleCreated(articleId: string, articleTitle: string,
         title: '创建了新文章',
         description: `文章标题：'${articleTitle}'`,
         metadata: {article_title: articleTitle, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logArticleUpdated(articleId: string, articleTitle: string, userId?: string, request?: NextRequest) {
@@ -72,7 +79,7 @@ export async function logArticleUpdated(articleId: string, articleTitle: string,
         title: '更新了文章',
         description: `文章标题：'${articleTitle}'`,
         metadata: {article_title: articleTitle, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logArticleDeleted(articleId: string, articleTitle: string, userId?: string, request?: NextRequest) {
@@ -83,7 +90,7 @@ export async function logArticleDeleted(articleId: string, articleTitle: string,
         title: '删除了文章',
         description: `文章标题：'${articleTitle}'`,
         metadata: {article_title: articleTitle, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logArticlePublished(articleId: string, articleTitle: string, userId?: string, request?: NextRequest) {
@@ -94,7 +101,7 @@ export async function logArticlePublished(articleId: string, articleTitle: strin
         title: '发布了文章',
         description: `文章标题：'${articleTitle}'`,
         metadata: {article_title: articleTitle, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logMediaUploaded(mediaId: string, filename: string, fileSize: number, userId?: string, request?: NextRequest) {
@@ -105,7 +112,7 @@ export async function logMediaUploaded(mediaId: string, filename: string, fileSi
         title: '上传了新媒体文件',
         description: `文件：'${filename}'`,
         metadata: {filename, file_size: fileSize, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logMediaDeleted(mediaId: string, filename: string, userId?: string, request?: NextRequest) {
@@ -116,7 +123,7 @@ export async function logMediaDeleted(mediaId: string, filename: string, userId?
         title: '删除了媒体文件',
         description: `文件：'${filename}'`,
         metadata: {filename, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logUserRegistered(userId: string, username: string, request?: NextRequest) {
@@ -127,7 +134,7 @@ export async function logUserRegistered(userId: string, username: string, reques
         title: '新用户注册',
         description: `用户：'${username}' 加入了系统`,
         metadata: {username, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logUserLogin(userId: string, username: string, request?: NextRequest) {
@@ -138,7 +145,7 @@ export async function logUserLogin(userId: string, username: string, request?: N
         title: '用户登录',
         description: `用户：'${username}' 登录了系统`,
         metadata: {username, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logUserLogout(userId: string, username: string, request?: NextRequest) {
@@ -149,7 +156,7 @@ export async function logUserLogout(userId: string, username: string, request?: 
         title: '用户登出',
         description: `用户：'${username}' 登出了系统`,
         metadata: {username, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logCommentCreated(commentId: string, articleTitle: string, userId?: string, request?: NextRequest) {
@@ -160,7 +167,7 @@ export async function logCommentCreated(commentId: string, articleTitle: string,
         title: '创建了评论',
         description: `在文章：'${articleTitle}' 下创建了评论`,
         metadata: {article_title: articleTitle, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logCommentDeleted(commentId: string, articleTitle: string, userId?: string, request?: NextRequest) {
@@ -171,7 +178,7 @@ export async function logCommentDeleted(commentId: string, articleTitle: string,
         title: '删除了评论',
         description: `在文章：'${articleTitle}' 下删除了评论`,
         metadata: {article_title: articleTitle, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logProfileUpdated(userId: string, username: string, request?: NextRequest) {
@@ -182,7 +189,7 @@ export async function logProfileUpdated(userId: string, username: string, reques
         title: '更新了个人资料',
         description: `用户：'${username}' 更新了个人资料`,
         metadata: {username, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logPasswordChanged(userId: string, username: string, request?: NextRequest) {
@@ -193,7 +200,7 @@ export async function logPasswordChanged(userId: string, username: string, reque
         title: '修改了密码',
         description: `用户：'${username}' 修改了密码`,
         metadata: {username, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logRoleAssigned(userId: string, username: string, roleName: string, request?: NextRequest) {
@@ -204,7 +211,7 @@ export async function logRoleAssigned(userId: string, username: string, roleName
         title: '分配了角色',
         description: `为用户：'${username}' 分配了角色：${roleName}`,
         metadata: {username, role_name: roleName, user_id: userId}
-    }, request!);
+    }, request);
 }
 
 export async function logPermissionGranted(userId: string, username: string, permissionName: string, request?: NextRequest) {
@@ -215,5 +222,5 @@ export async function logPermissionGranted(userId: string, username: string, per
         title: '授予了权限',
         description: `为用户：'${username}' 授予了权限：${permissionName}`,
         metadata: {username, permission_name: permissionName, user_id: userId}
-    }, request!);
+    }, request);
 }
