@@ -372,9 +372,19 @@ OR REPLACE FUNCTION public.log_media_uploaded()
 RETURNS TRIGGER AS $$
 DECLARE
 v_user_id UUID;
+  v_filename
+VARCHAR(255);
+  v_file_size
+BIGINT;
 BEGIN
     v_user_id
 := NEW.user_id;
+    
+    -- Get filename and file_size from file_hashes table
+SELECT fh.filename, fh.file_size
+INTO v_filename, v_file_size
+FROM public.file_hashes fh
+WHERE fh.hash = NEW.hash LIMIT 1;
     
     -- Log the activity
 INSERT INTO public.activity_logs (user_id, activity_type_id, entity_type, entity_id, title, description, metadata)
@@ -382,8 +392,9 @@ SELECT v_user_id,
        at.id,
        'media',
        NEW.id::TEXT, '上传了新媒体文件',
-       '文件：''' || NEW.filename || '''',
-       jsonb_build_object('filename', NEW.filename, 'file_size', NEW.file_size, 'user_id', v_user_id)
+       '文件：''' || COALESCE(v_filename, NEW.original_filename) || '''',
+       jsonb_build_object('filename', COALESCE(v_filename, NEW.original_filename), 'file_size',
+                          COALESCE(v_file_size, 0), 'user_id', v_user_id)
 FROM public.activity_types at
 WHERE at.code = 'media_uploaded';
 
