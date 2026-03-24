@@ -6,7 +6,7 @@ import {useRouter} from "next/navigation"
 import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog"
-import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table"
+import {Table, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table"
 import {Badge} from "@/components/ui/badge"
 import {Alert, AlertDescription} from "@/components/ui/alert"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
@@ -15,6 +15,7 @@ import Link from "next/link"
 import {useToast} from "@/hooks/use-toast"
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar"
 import {Label} from "@/components/ui/label"
+import {VirtualTable} from "@/components/ui/virtual-list"
 
 interface User {
     id: string
@@ -203,66 +204,64 @@ export default function UserRolesPage() {
                                 当前用户数：<span className="font-medium">{users.length}</span>
                             </p>
                         </div>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>用户</TableHead>
-                                    <TableHead>邮箱</TableHead>
-                                    <TableHead>注册时间</TableHead>
-                                    <TableHead>当前角色</TableHead>
-                                    <TableHead className="text-right">操作</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {users.length === 0 ? (
+                        <div className="border rounded-md">
+                            <Table>
+                                <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-slate-500">
-                                            暂无用户
+                                        <TableHead>用户</TableHead>
+                                        <TableHead>邮箱</TableHead>
+                                        <TableHead>注册时间</TableHead>
+                                        <TableHead>当前角色</TableHead>
+                                        <TableHead className="text-right">操作</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                            </Table>
+                            <VirtualTable<User>
+                                items={users}
+                                itemHeight={68}
+                                overscan={5}
+                                containerClassName="max-h-[calc(100vh-300px)]"
+                                renderRow={(user) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage src={user.profile_picture}/>
+                                                    <AvatarFallback>{getInitials(user.username)}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium">{user.username}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{user.email}</TableCell>
+                                        <TableCell className="text-sm text-slate-500">
+                                            {new Date(user.created_at).toLocaleDateString("zh-CN")}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-wrap gap-1">
+                                                {user.roles.length === 0 ? (
+                                                    <Badge variant="outline" className="text-xs">
+                                                        无角色
+                                                    </Badge>
+                                                ) : (
+                                                    user.roles.map((role) => (
+                                                        <Badge key={role.id} variant="default" className="text-xs">
+                                                            {role.name}
+                                                        </Badge>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="outline" size="sm"
+                                                    onClick={() => handleAssignRole(user)}>
+                                                <UserCog className="h-4 w-4 mr-2"/>
+                                                分配角色
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
-                                ) : (
-                                    users.map((user) => (
-                                        <TableRow key={user.id}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarImage src={user.profile_picture}/>
-                                                        <AvatarFallback>{getInitials(user.username)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="font-medium">{user.username}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{user.email}</TableCell>
-                                            <TableCell className="text-sm text-slate-500">
-                                                {new Date(user.created_at).toLocaleDateString("zh-CN")}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {user.roles.length === 0 ? (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            无角色
-                                                        </Badge>
-                                                    ) : (
-                                                        user.roles.map((role) => (
-                                                            <Badge key={role.id} variant="default" className="text-xs">
-                                                                {role.name}
-                                                            </Badge>
-                                                        ))
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="outline" size="sm"
-                                                        onClick={() => handleAssignRole(user)}>
-                                                    <UserCog className="h-4 w-4 mr-2"/>
-                                                    分配角色
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
                                 )}
-                            </TableBody>
-                        </Table>
+                            />
+                        </div>
                     </CardContent>
                 </Card>
 

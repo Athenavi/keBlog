@@ -7,6 +7,7 @@ import {CalendarIcon, ClockIcon, RefreshCw, UserIcon} from "lucide-react"
 import {useEffect, useState} from "react"
 import {useAuth} from "@/hooks/use-auth"
 import {Button} from "@/components/ui/button"
+import VirtualList from "@/components/ui/virtual-list"
 
 interface Activity {
     id: number
@@ -232,8 +233,12 @@ export default function ActivityPage() {
                             </p>
                         </div>
                     ) : (
-                        <div className="space-y-4">
-                            {activities.map((activity) => (
+                        <VirtualList<Activity>
+                            items={activities}
+                            itemHeight={160}
+                            overscan={5}
+                            containerClassName="space-y-2"
+                            renderItem={(activity) => (
                                 <div
                                     key={activity.id}
                                     className="flex items-start space-x-4 p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -276,8 +281,8 @@ export default function ActivityPage() {
                                         </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                        />
                     )}
                 </CardContent>
             </Card>

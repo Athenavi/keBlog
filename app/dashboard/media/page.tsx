@@ -9,6 +9,7 @@ import {Badge} from "@/components/ui/badge"
 import {Alert, AlertDescription} from "@/components/ui/alert"
 import {ArrowLeft, Download, Eye, File, FileText, ImageIcon, Plus, Search, Trash2, Video} from "lucide-react"
 import Link from "next/link"
+import VirtualList from "@/components/ui/virtual-list"
 
 interface MediaFile {
     id: string
@@ -207,7 +208,7 @@ export default function MediaPage() {
                         </Alert>
                     )}
 
-                    {/* Media Grid */}
+                    {/* Media Grid with Virtual Scroll */}
                     {filteredMedia.length === 0 ? (
                         <Card className="border-slate-200 dark:border-slate-700">
                             <CardContent className="text-center py-12">
@@ -233,8 +234,12 @@ export default function MediaPage() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredMedia.map((file) => (
+                        <VirtualList<MediaFile>
+                            items={filteredMedia}
+                            itemHeight={380}
+                            overscan={3}
+                            containerClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                            renderItem={(file) => (
                                 <Card
                                     key={file.id}
                                     className="border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow"
@@ -308,8 +313,8 @@ export default function MediaPage() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            ))}
-                        </div>
+                            )}
+                        />
                     )}
                 </div>
             </div>
